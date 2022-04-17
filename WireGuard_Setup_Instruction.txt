@@ -1,0 +1,82 @@
+1. Install WireGuard and Generating a Key
+
+sudo apt update
+sudo apt install wireguard
+
+cd /etc/wireguard
+
+wg genkey | sudo tee privatekey | wg pubkey > publickey
+
+Note: privatekey will be the name of your file name for your private key. 
+	Same with publickey. So you can name it with whatever name you would like
+
+After that, you'll find privatekey and publickey file in your current directory
+(/etc/wireguard/)
+
+2. Configure IP Forwarding
+
+sudo nano /etc/sysctl.conf
+
+Uncomment the following line by removing # at the beginning of the line
+
+net.ipv4.ip_forward=1
+
+Once done, save the file (ctrl + x, and Y) and exit the editor
+
+Apply the new option with command below
+
+sudo sysctl -p
+
+3. Configuring firewall rules
+
+Install UFW
+
+sudo apt install ufw
+
+Add the following rules to allow SSH and WireGuard connections
+
+sudo ufw allow ssh
+sudo ufw allow 51820/udp
+
+Enable the firewall
+
+sudo ufw enable
+
+Check the active firewall rules
+
+sudo ufw status
+
+4. Generate Server configuration file
+
+sudo nano /etc/wireguard/wg0.conf
+
+Add the following to the file
+
+[Interface]
+PrivateKey = THE_PRIVATE_KEY_GENERATED_FROM_STEP1
+Address = 10.0.0.1/24
+PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+ListenPort = 51820
+
+[Peer]
+PublicKey = YOU_DONT_HAVE_THIS_INFO_AT_THIS_POINT
+AllowedIPs = 10.0.0.2/32 
+
+
+5. Start WireGuard and enable it at boot
+
+wg-quick up wg0
+
+Once your WireGuard is running, you can check your configuration with the following command
+
+wg show
+
+To enable it to start automatically once it boots
+
+systemctl enable wg-quick@wg0
+
+
+
+
+Credit and Reference to: https://upcloud.com/community/tutorials/get-started-wireguard-vpn/
